@@ -150,6 +150,7 @@ module ParallelDelayed
           sleep(options[:sleep_delay]) if options[:sleep_delay] && no_job
           no_job
         end
+        File.open("#{options[:pid_dir]}/#{worker_name}.pid", 'w'){|f| f.write(Process.pid)} # recreate PID file
         break if no_job_res.first && options[:exit_on_complete]
       end
 
