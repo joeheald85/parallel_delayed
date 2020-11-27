@@ -8,6 +8,7 @@ end
 require 'fileutils'
 require 'optparse'
 require 'pathname'
+require 'parallel'
 
 module ParallelDelayed
   class Command # rubocop:disable ClassLength
