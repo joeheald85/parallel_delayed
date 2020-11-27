@@ -1,8 +1,6 @@
 # ParallelDelayed
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/parallel_delayed`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Utilize parallel with delayed_job to kill processes and keep mem usage low. After every work_off, we kill the process, free memory, and start a fresh process
 
 ## Installation
 
@@ -22,7 +20,7 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+In your rails application's script/delayed_job or bin/delayed_job, replace `Delayed::Command` with `ParallelDelayed::Command`
 
 ## Development
 
