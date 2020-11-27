@@ -26,7 +26,7 @@ module ParallelDelayed
       @monitor = false
 
       opts = OptionParser.new do |opt|
-        opt.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options] start|stop|restart|run"
+        opt.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options] start|stop"
 
         opt.on('-h', '--help', 'Show this message') do
           puts opt
@@ -139,9 +139,16 @@ module ParallelDelayed
 
       while true
         break if Rails.cache.read('stop_delayed_jobs')
-        Parallel.each([0], :in_processes => 1) do |x|
-          Delayed::Worker.new(options).work_off
+        res = Parallel.map([0], :in_processes => 1) do |x|
+          if options[:read_ahead]
+            ran_job = Delayed::Worker.new(options).work_off(options[:read_ahead]).sum > 0
+          else
+            ran_job = Delayed::Worker.new(options).reserve_and_run_one_job.nil?
+          end
+          sleep(options[:sleep_delay]) if options[:sleep_delay] && !ran_job
+          ran_job
         end
+        break if !res.first && options[:exit_on_complete]
       end
 
     rescue => e
