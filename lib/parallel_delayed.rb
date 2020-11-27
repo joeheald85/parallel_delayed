@@ -133,6 +133,8 @@ module ParallelDelayed
     end
 
     def run(worker_name = nil, options = {})
+      pid_file = "#{options[:pid_dir]}/#{worker_name}.parallel.pid"
+      File.open(pid_file, 'w'){|f| f.write(Process.pid)} # create PID file
       Dir.chdir(root)
 
       Delayed::Worker.after_fork
@@ -150,14 +152,14 @@ module ParallelDelayed
           sleep(options[:sleep_delay]) if options[:sleep_delay] && no_job
           no_job
         end
-        File.open("#{options[:pid_dir]}/#{worker_name}.pid", 'w'){|f| f.write(Process.pid)} # recreate PID file
         break if no_job_res.first && options[:exit_on_complete]
       end
-
+      File.delete(pid_file) if File.exists?(pid_file) # delete PID file
     rescue => e
       STDERR.puts e.message
       STDERR.puts e.backtrace
       ::Rails.logger.fatal(e) if rails_logger_defined?
+      File.delete(pid_file) if File.exists?(pid_file) # delete PID file
       exit_with_error_status
     end
 
