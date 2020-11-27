@@ -119,10 +119,15 @@ module ParallelDelayed
     end
 
     def run_process(process_name, options = {})
-      Delayed::Worker.before_fork
-      Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
-        $0 = File.join(options[:prefix], process_name) if @options[:prefix]
-        run process_name, options
+      if @args.include?('stop')
+        Rails.cache.write('stop_delayed_jobs', true)
+      else
+        Rails.cache.delete('stop_delayed_jobs')
+        Delayed::Worker.before_fork
+        Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
+          $0 = File.join(options[:prefix], process_name) if @options[:prefix]
+          run process_name, options
+        end
       end
     end
 
@@ -133,6 +138,7 @@ module ParallelDelayed
       Delayed::Worker.logger ||= Logger.new(File.join(@options[:log_dir], 'delayed_job.log'))
 
       while true
+        break if Rails.cache.read('stop_delayed_jobs')
         Parallel.each([0], :in_processes => 1) do |x|
           Delayed::Worker.new(options).work_off
         end
