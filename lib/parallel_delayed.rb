@@ -139,16 +139,16 @@ module ParallelDelayed
 
       while true
         break if Rails.cache.read('stop_delayed_jobs')
-        res = Parallel.map([0], :in_processes => 1) do |x|
+        no_job_res = Parallel.map([0], :in_processes => 1) do |x|
           if options[:read_ahead]
-            ran_job = Delayed::Worker.new(options).work_off(options[:read_ahead]).sum > 0
+            no_job = Delayed::Worker.new(options).work_off(options[:read_ahead]).sum == 0
           else
-            ran_job = Delayed::Worker.new(options).reserve_and_run_one_job.nil?
+            no_job = Delayed::Worker.new(options).reserve_and_run_one_job.nil?
           end
-          sleep(options[:sleep_delay]) if options[:sleep_delay] && !ran_job
-          ran_job
+          sleep(options[:sleep_delay]) if options[:sleep_delay] && no_job
+          no_job
         end
-        break if !res.first && options[:exit_on_complete]
+        break if no_job.first && options[:exit_on_complete]
       end
 
     rescue => e
