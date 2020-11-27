@@ -7,20 +7,20 @@ Gem::Specification.new do |spec|
   spec.name          = "parallel_delayed"
   spec.version       = ParallelDelayed::VERSION
   spec.authors       = ["Joe Heald"]
-  spec.email         = ["jheald@bostonlogic.com"]
+  spec.email         = ["joeheald85@gmail.com"]
 
-  spec.summary       = %q{TODO: Write a short summary, because RubyGems requires one.}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.summary       = %q{Utilize parallel with delayed_job to kill processes and keep mem usage low.}
+  spec.description   = %q{Utilize parallel with delayed_job to kill processes and keep mem usage low. After every work_off, we kill the process, free memory, and start a fresh process}
+  spec.homepage      = "https://github.com/joeheald85/parallel_delayed"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.
   if spec.respond_to?(:metadata)
-    spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
+    spec.metadata["allowed_push_host"] = "https://github.com/"
 
     spec.metadata["homepage_uri"] = spec.homepage
-    spec.metadata["source_code_uri"] = "TODO: Put your gem's public repo URL here."
-    spec.metadata["changelog_uri"] = "TODO: Put your gem's CHANGELOG.md URL here."
+    spec.metadata["source_code_uri"] = "https://github.com/joeheald85/parallel_delayed"
+    spec.metadata["changelog_uri"] = "https://github.com/joeheald85/parallel_delayed"
   else
     raise "RubyGems 2.0 or newer is required to protect against " \
       "public gem pushes."
@@ -37,4 +37,6 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "bundler", "~> 1.17"
   spec.add_development_dependency "rake", "~> 10.0"
+  spec.add_dependency "delayed_job"
+  spec.add_dependency "parallel"
 end
