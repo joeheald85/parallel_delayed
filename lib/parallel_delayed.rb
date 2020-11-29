@@ -121,9 +121,9 @@ module ParallelDelayed
 
     def run_process(process_name, options = {})
       if @args.include?('stop')
-        `touch #{root}/tmp/stop_delayed_jobs`
+        `touch #{options[:pid_dir]}/stop_delayed_jobs`
       else
-        File.delete("#{root}/tmp/stop_delayed_jobs") if File.exists?("#{root}/tmp/stop_delayed_jobs")
+        File.delete("#{options[:pid_dir]}/stop_delayed_jobs") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
         Delayed::Worker.before_fork
         Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
           $0 = File.join(options[:prefix], process_name) if @options[:prefix]
@@ -142,13 +142,12 @@ module ParallelDelayed
       cycles_ran = 0
 
       while true
-        break if File.exists?("#{root}/tmp/stop_delayed_jobs")
+        break if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
         no_job_res = Parallel.map([options], :in_processes => 1) do |worker_options|
           jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
           !jobs_res || (jobs_res.sum == 0)
         end
-        cycles_ran += 1
-        GC.start if cycles_ran % 100 == 0
+        GC.start if (cycles_ran += 1) % 100 == 0
         break if no_job_res.first && options[:exit_on_complete]
         sleep(options[:sleep_delay]) if no_job_res.first && options[:sleep_delay]
       end
