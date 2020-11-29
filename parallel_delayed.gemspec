@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["joeheald85@gmail.com"]
 
   spec.summary       = %q{Utilize parallel with delayed_job to kill processes and keep mem usage low.}
-  spec.description   = %q{Utilize parallel with delayed_job to kill processes and keep mem usage low. After every work_off, we kill the process, free memory, and start a fresh process}
+  spec.description   = %q{Utilize parallel with delayed_job to kill processes and keep mem usage low. After every job, we kill the process, free memory, and start a fresh process}
   spec.homepage      = "https://github.com/joeheald85/parallel_delayed"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'

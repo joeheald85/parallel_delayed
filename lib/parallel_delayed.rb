@@ -139,20 +139,18 @@ module ParallelDelayed
 
       Delayed::Worker.after_fork
       Delayed::Worker.logger ||= Logger.new(File.join(@options[:log_dir], 'delayed_job.log'))
+      cycles_ran = 0
 
       while true
         break if File.exists?("#{root}/tmp/stop_delayed_jobs")
-        no_job_res = Parallel.map([0], :in_processes => 1) do |x|
-          if options[:read_ahead]
-            jobs_res = Delayed::Worker.new(options).work_off(options[:read_ahead])
-            no_job = !jobs_res || (jobs_res.sum == 0)
-          else
-            no_job = Delayed::Worker.new(options).send(:reserve_and_run_one_job).nil?
-          end
-          sleep(options[:sleep_delay]) if options[:sleep_delay] && no_job
-          no_job
+        no_job_res = Parallel.map([options], :in_processes => 1) do |worker_options|
+          jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
+          !jobs_res || (jobs_res.sum == 0)
         end
+        cycles_ran += 1
+        GC.start if cycles_ran % 100 == 0
         break if no_job_res.first && options[:exit_on_complete]
+        sleep(options[:sleep_delay]) if no_job_res.first && options[:sleep_delay]
       end
       File.delete(pid_file) if File.exists?(pid_file) # delete PID file
     rescue => e
