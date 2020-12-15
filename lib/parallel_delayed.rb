@@ -25,7 +25,6 @@ module ParallelDelayed
 
       @worker_count = 1
       @monitor = false
-      @max_memory = nil
 
       opts = OptionParser.new do |opt|
         opt.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options] start|stop"
@@ -59,7 +58,7 @@ module ParallelDelayed
           @monitor = true
         end
         opt.on('--max-memory N', 'Maximum amount of memory to allocate.') do |n|
-          @max_memory = n.to_i
+          @options[:max_memory] = n.to_i
         end
         opt.on('--sleep-delay N', 'Amount of time to sleep when no jobs are found') do |n|
           @options[:sleep_delay] = n.to_i
@@ -147,15 +146,15 @@ module ParallelDelayed
 
       while true
         break if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
-        no_job_res = Parallel.map([options], :in_threads => 1) do |worker_options|
+        no_job_res = Parallel.map([options], :in_processes => 1) do |worker_options|
           jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
           !jobs_res || (jobs_res.sum == 0)
         end
         GC.start if (cycles_ran += 1) % 100 == 0
         break if no_job_res.first && options[:exit_on_complete]
-        if @max_memory.to_i > 0
+        if options[:max_memory].to_i > 0
           pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{$$}"`.strip.split.map(&:to_i)
-          break if size > @max_memory
+          break if size > options[:max_memory]
         end
         sleep(options[:sleep_delay]) if no_job_res.first && options[:sleep_delay]
       end
