@@ -124,7 +124,7 @@ module ParallelDelayed
 
     def run_process(process_name, options = {})
       if @args.include?('stop')
-        `touch #{options[:pid_dir]}/stop_delayed_jobs`
+        `touch #{options[:pid_dir]}/stop_delayed_jobs#{"_#{process_name}" if process_name.match('.')}`
       else
         File.delete("#{options[:pid_dir]}/stop_delayed_jobs") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
         Delayed::Worker.before_fork
@@ -145,15 +145,26 @@ module ParallelDelayed
       cycles_ran = 0
 
       while true
-        break if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
-        no_job_res = Parallel.map([options], :in_processes => 1) do |worker_options|
-          jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
-          !jobs_res || (jobs_res.sum == 0)
+        break if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs") || File.exists?("#{options[:pid_dir]}/stop_delayed_jobs_#{worker_name}")
+        no_job_res = Parallel.map([[worker_name, options]], :in_processes => 1) do |process_name, worker_options|
+          no_jobs = nil
+          while true
+            break if no_jobs && worker_options[:exit_on_complete]
+            break if File.exists?("#{worker_options[:pid_dir]}/stop_delayed_jobs") || File.exists?("#{worker_options[:pid_dir]}/stop_delayed_jobs_#{process_name}")
+            if worker_options[:max_memory].to_i > 0
+              pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
+              break if size > worker_options[:max_memory]
+            end
+            jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
+            no_jobs = !jobs_res || (jobs_res.sum == 0)
+            sleep(options[:sleep_delay]) if no_jobs && worker_options[:sleep_delay]
+          end
+          no_jobs
         end
         GC.start if (cycles_ran += 1) % 100 == 0
         break if no_job_res.first && options[:exit_on_complete]
         if options[:max_memory].to_i > 0
-          pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{$$}"`.strip.split.map(&:to_i)
+          pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
           break if size > options[:max_memory]
         end
         sleep(options[:sleep_delay]) if no_job_res.first && options[:sleep_delay]
