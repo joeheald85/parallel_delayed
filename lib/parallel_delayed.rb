@@ -126,6 +126,7 @@ module ParallelDelayed
       if @args.include?('stop')
         `touch #{options[:pid_dir]}/stop_delayed_jobs#{"_#{process_name}" if process_name.match('.')}`
       else
+        File.delete("#{options[:pid_dir]}/stop_delayed_jobs_#{process_name}") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs_#{process_name}")
         File.delete("#{options[:pid_dir]}/stop_delayed_jobs") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
         Delayed::Worker.before_fork
         Daemons.run_proc(process_name, :dir => options[:pid_dir], :dir_mode => :normal, :monitor => @monitor, :ARGV => @args) do |*_args|
