@@ -124,7 +124,7 @@ module ParallelDelayed
 
     def run_process(process_name, options = {})
       if @args.include?('stop')
-        `touch #{options[:pid_dir]}/stop_delayed_jobs#{"_#{process_name}" if process_name.match('.')}`
+        `touch #{options[:pid_dir]}/stop_delayed_jobs#{"_#{process_name}" if process_name.match(/delayed_job\./)}`
       else
         File.delete("#{options[:pid_dir]}/stop_delayed_jobs_#{process_name}") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs_#{process_name}")
         File.delete("#{options[:pid_dir]}/stop_delayed_jobs") if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs")
