@@ -156,7 +156,7 @@ module ParallelDelayed
               pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
               break if size > worker_options[:max_memory]
             end
-            jobs_res = Delayed::Worker.new(worker_options).work_off(worker_options[:read_ahead] || 1)
+            jobs_res = Delayed::Worker.new(worker_options).work_off((worker_options[:read_ahead] || 1).to_i)
             no_jobs = !jobs_res || (jobs_res.sum == 0)
             sleep(options[:sleep_delay]) if no_jobs && worker_options[:sleep_delay]
           end
