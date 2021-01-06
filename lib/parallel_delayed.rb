@@ -156,18 +156,29 @@ module ParallelDelayed
               pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
               break if size > worker_options[:max_memory]
             end
-            jobs_res = Delayed::Worker.new(worker_options).work_off((worker_options[:read_ahead] || 1).to_i)
-            no_jobs = !jobs_res || (jobs_res.sum == 0)
+            if worker_options[:read_ahead].to_i > 0
+              jobs_res = Delayed::Worker.new(worker_options).work_off((worker_options[:read_ahead] || 1).to_i)
+              no_jobs = !jobs_res || (jobs_res.sum == 0)
+            else
+              worker = Delayed::Worker.new(worker_options)
+              job = worker.send(:reserve_job)
+              worker.class.lifecycle.run_callbacks(:perform, worker, job) { worker.run(job) } if job
+              no_jobs = job.nil?
+              if worker_options[:max_memory].to_i > 0 && defined?(::Honeybadger)
+                pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
+                if size > worker_options[:max_memory]
+                  error = StandardError.new("DJ Worker exceeded memory")
+                  handler_prefix = job.handler.split("\n").first
+                  Honeybadger.notify(error, context: {user_id: handler_prefix, process_name: process_name, handler: job.handler})
+                end
+              end
+            end
             sleep(options[:sleep_delay]) if no_jobs && worker_options[:sleep_delay]
           end
           no_jobs
         end
         GC.start if (cycles_ran += 1) % 100 == 0
         break if no_job_res.first && options[:exit_on_complete]
-        if options[:max_memory].to_i > 0
-          pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
-          break if size > options[:max_memory]
-        end
         sleep(options[:sleep_delay]) if no_job_res.first && options[:sleep_delay]
       end
       File.delete(pid_file) if File.exists?(pid_file) # delete PID file
