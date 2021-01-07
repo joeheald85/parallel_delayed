@@ -149,10 +149,11 @@ module ParallelDelayed
         break if File.exists?("#{options[:pid_dir]}/stop_delayed_jobs") || File.exists?("#{options[:pid_dir]}/stop_delayed_jobs_#{worker_name}")
         no_job_res = Parallel.map([[worker_name, options]], :in_processes => 1) do |process_name, worker_options|
           no_jobs = nil
+          worker_cycles = 0
           while true
             break if no_jobs && worker_options[:exit_on_complete]
             break if File.exists?("#{worker_options[:pid_dir]}/stop_delayed_jobs") || File.exists?("#{worker_options[:pid_dir]}/stop_delayed_jobs_#{process_name}")
-            if worker_options[:max_memory].to_i > 0
+            if worker_options[:max_memory].to_i > 0 && (((worker_cycles += 1) % 10) == 0)
               pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
               break if size > worker_options[:max_memory]
             end
