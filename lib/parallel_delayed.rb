@@ -57,6 +57,9 @@ module ParallelDelayed
         opt.on('-m', '--monitor', 'Start monitor process.') do
           @monitor = true
         end
+        opt.on('--memory-alerts', 'Alert memory threshold exceeded.') do
+          @options[:memory_alerts] = true
+        end
         opt.on('--max-memory N', 'Maximum amount of memory to allocate.') do |n|
           @options[:max_memory] = n.to_i
         end
@@ -165,7 +168,7 @@ module ParallelDelayed
               job = worker.send(:reserve_job)
               worker.class.lifecycle.run_callbacks(:perform, worker, job) { worker.run(job) } if job
               no_jobs = job.nil?
-              if worker_options[:max_memory].to_i > 0 && defined?(::Honeybadger)
+              if worker_options[:memory_alerts] && worker_options[:max_memory].to_i > 0 && ((worker_cycles % 10) == 1) && defined?(::Honeybadger)
                 pid, size = `ps ax -o pid,rss | grep -E "^[[:space:]]*#{Process.pid}"`.strip.split.map(&:to_i)
                 if size > worker_options[:max_memory]
                   error = StandardError.new("DJ Worker exceeded memory")
